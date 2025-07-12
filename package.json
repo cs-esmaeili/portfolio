@@ -21,7 +21,8 @@
   "homepage": "https://github.com/cs-esmaeili/portfolio#readme",
   "dependencies": {
     "gsap": "^3.13.0",
-    "three": "^0.178.0"
+    "three": "^0.178.0",
+    "three-mesh-bvh": "^0.9.1"
   },
   "devDependencies": {
     "vite": "^7.0.3"

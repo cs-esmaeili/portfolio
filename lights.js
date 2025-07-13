@@ -16,10 +16,10 @@ export const initLight = (scene) => {
     directionalLight.shadow.mapSize.set(4096, 4096);
     scene.add(directionalLight);
 
-    const shadowHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
-    scene.add(shadowHelper);
+    // const shadowHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
+    // scene.add(shadowHelper);
 
-    const helper = new THREE.DirectionalLightHelper(directionalLight, 5);
-    scene.add(helper);
+    // const helper = new THREE.DirectionalLightHelper(directionalLight, 5);
+    // scene.add(helper);
 
 }

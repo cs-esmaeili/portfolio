@@ -1,60 +1,9 @@
 import { showModal, hideModal } from './modal';
 import { gsap } from "gsap";
 import * as THREE from 'three';
-import { MeshBVH, MeshBVHHelper, INTERSECTED, NOT_INTERSECTED } from 'three-mesh-bvh';
 
 
-// تابع بررسی برخورد
-const checkCollision = (character, targetPosition, scene, getZamin) => {
-    const zamin = getZamin();
-    if (!character.instance) return false;
 
-
-    // ایجاد جعبه موقتی برای موقعیت هدف
-    const tempBox = new THREE.Box3().copy(character.boundingBox);
-    const currentPosition = character.instance.position.clone();
-    tempBox.translate(targetPosition.clone().sub(currentPosition));
-
-    const boxHelper = new THREE.Box3Helper(tempBox, 0x00ff00);
-    scene.add(boxHelper);
-
-    let collisionDetected = false;
-
-
-    console.log("2");
-
-    zamin.traverse(child => {
-        if (child.isMesh && child.geometry && child.geometry.boundsTree) {
-            const matrixWorld = child.matrixWorld;
-
-            child.geometry.boundsTree.shapecast({
-                intersectsBounds: box => box.intersectsBox(tempBox),
-                intersectsTriangle: tri => {
-                    // Clone and transform points
-                    const a = tri.a.clone().applyMatrix4(matrixWorld);
-                    const b = tri.b.clone().applyMatrix4(matrixWorld);
-                    const c = tri.c.clone().applyMatrix4(matrixWorld);
-
-                    // Create a new box from transformed triangle
-                    const triBox = new THREE.Box3().setFromPoints([a, b, c]);
-
-                    if (triBox.intersectsBox(tempBox)) {
-                        collisionDetected = true;
-                        return true; // Stop traversal
-                    }
-                    return false;
-                }
-            });
-        }
-    });
-
-    console.log("3");
-
-    return collisionDetected;
-
-};
-
-// تابع تنظیم رویدادها
 export const setupEvents = (camera, renderer, pointer, width, height, aspect, getIntersectObject, getCharacter, setCharacter, scene, getZamin) => {
     const frustumSize = 100;
 
@@ -88,9 +37,6 @@ export const setupEvents = (camera, renderer, pointer, width, height, aspect, ge
 
         setCharacter({ ...character, isMoving: true });
 
-        // بررسی برخورد قبل از حرکت
-        const collision = checkCollision(character, targetPosition, scene, getZamin);
-        console.log("collision  = " + collision);
 
         const t1 = gsap.timeline({
             onComplete: () => {

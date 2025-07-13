@@ -56,7 +56,7 @@ export function createRapierDebugRenderer(world, scene, RAPIER) {
                 scene.add(wireframeLine);
                 staticObjectWireframes.push(wireframeLine);
                 
-                console.log(`Added wireframe for mesh: ${child.name} in object: ${object.name}`);
+                // console.log(`Added wireframe for mesh: ${child.name} in object: ${object.name}`);
             }
         });
     }
@@ -75,7 +75,7 @@ export function createRapierDebugRenderer(world, scene, RAPIER) {
                 if (mesh) {
                     scene.add(mesh);
                     colliderMeshes.set(colliderHandle, mesh);
-                    console.log(`Added debug mesh for collider type: ${collider.shapeType()}`);
+                    // console.log(`Added debug mesh for collider type: ${collider.shapeType()}`);
                 }
             }
         });

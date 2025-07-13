@@ -1,78 +1,11 @@
-// import * as THREE from 'three';
-// import { initLight } from './lights'
-// import { createCamera } from './camera'
-// import { loadGLTF } from './loader';
-// import { initControls } from './controls'
-// import { setupEvents } from './events'
-// import { initRenderer } from './renderer'
-
-// const canvas = document.getElementById("experience-canvas");
-
-// let { width, height, aspect } = {
-//     width: window.innerWidth,
-//     height: window.innerHeight,
-//     aspect: window.innerWidth / window.innerHeight
-// }
-// const intersectObjectsNames = ["tablo1", "tablo2", "tablo3"];
-// const intersectObjects = [];
-// let intersectObject = null;
-// let zamin = null;
-
-// let character = { instance: null, boundingBox: null, moveDistance: 7, jumpHeight: 5, isMoving: false, moveDuration: 0.2 };
-
-// const scene = new THREE.Scene();
-// const camera = createCamera(aspect);
-// initLight(scene);
-
-// loadGLTF(scene,intersectObjectsNames,intersectObjects,
-//     ()=> {
-//         if (character.boundingBox) {
-//             const boxHelper = new THREE.Box3Helper(character.boundingBox, 0x00ff00); // سبز
-//             scene.add(boxHelper);
-//         }
-//     },
-//     character,zamin
-// )
-
-
-// const controls = initControls(camera, canvas);
-// const renderer = initRenderer(canvas, width, height);
-// const raycaster = new THREE.Raycaster();
-// const pointer = new THREE.Vector2();
-
-
-// setupEvents(camera, renderer, pointer, width, height, aspect,
-//     () => intersectObject,
-//     () => character,
-//     (newCharacter) => character = newCharacter,
-//     scene,
-//     () => zamin
-// );
-
-// const animate = () => {
-
-//     raycaster.setFromCamera(pointer, camera);
-//     const intersects = raycaster.intersectObjects(intersectObjects);
-
-//     if (intersects.length > 0) {
-//         document.body.style.cursor = "pointer";
-//         if (intersectObject != intersects[0].object.parent)
-//             intersectObject = intersects[0].object.parent;
-//     } else {
-//         document.body.style.cursor = "default";
-//         intersectObject = null;
-//     }
-
-//     controls.update();
-//     renderer.render(scene, camera);
-// }
-// renderer.setAnimationLoop(animate);
 import * as THREE from 'three';
 const RAPIER = await import('@dimforge/rapier3d');
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { loadGLTF } from './loader';
 import { initLight } from './lights';
 import { createRapierDebugRenderer } from './rapierDebug';
+import { setupEvents } from './events'
+import { createCamera } from './camera';
 
 // ---------- Configuration ----------
 const CONFIG = {
@@ -100,6 +33,12 @@ let intersectObject = null;
 let raycaster = new THREE.Raycaster();
 let pointer = new THREE.Vector2();
 
+let { width, height, aspect } = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    aspect: window.innerWidth / window.innerHeight
+}
+
 // Game objects
 let character = {
     instance: null,
@@ -125,20 +64,6 @@ function initScene() {
     console.log('✅ Scene initialized');
 }
 
-function initCamera() {
-    camera = new THREE.PerspectiveCamera(
-        CONFIG.camera.fov,
-        window.innerWidth / window.innerHeight,
-        CONFIG.camera.near,
-        CONFIG.camera.far
-    );
-    camera.position.set(
-        CONFIG.camera.position.x,
-        CONFIG.camera.position.y,
-        CONFIG.camera.position.z
-    );
-    console.log('✅ Camera initialized');
-}
 
 function initControls() {
     controls = new OrbitControls(camera, CONFIG.canvas);
@@ -147,43 +72,18 @@ function initControls() {
 
 function initRenderer() {
     renderer = new THREE.WebGLRenderer({ canvas: CONFIG.canvas });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(width, height);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     console.log('✅ Renderer initialized');
 }
 
-function initLights() {
-    initLight(scene);
-    console.log('✅ Lights initialized');
-}
 
 function initDebugRenderer() {
     debugRenderer = createRapierDebugRenderer(world, scene, RAPIER);
     console.log('✅ Debug renderer initialized');
 }
 
-function initEventListeners() {
-    // Mouse move for raycasting
-    CONFIG.canvas.addEventListener('mousemove', onMouseMove);
-    
-    // Window resize
-    window.addEventListener('resize', onWindowResize);
-    
-    console.log('✅ Event listeners initialized');
-}
-
-// ---------- Event Handlers ----------
-function onMouseMove(event) {
-    pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-    pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-}
-
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
 
 // ---------- Character Physics Setup ----------
 function setupCharacterPhysics() {
@@ -229,7 +129,7 @@ function handleRaycasting() {
     if (intersects.length > 0) {
         document.body.style.cursor = "pointer";
         const newIntersectObject = intersects[0].object.parent;
-        
+
         if (intersectObject !== newIntersectObject) {
             intersectObject = newIntersectObject;
             // You can add hover effects here
@@ -269,19 +169,25 @@ function animate() {
     renderer.render(scene, camera);
 }
 
+
 // ---------- Main Initialization ----------
 function init() {
     console.log('🚀 Initializing application...');
-    
+
     // Initialize core systems
     initPhysics();
     initScene();
-    initCamera();
+    camera = createCamera(aspect);
     initControls();
     initRenderer();
-    initLights();
+    initLight(scene);
     initDebugRenderer();
-    initEventListeners();
+
+    setupEvents(camera, renderer, pointer, width, height, aspect,
+        () => intersectObject,
+        () => character.body,
+        (newCharacter) => character = newCharacter,
+    );
 
     // Load GLTF models
     loadGLTF(
@@ -299,13 +205,13 @@ function init() {
 
 function onLoadComplete() {
     console.log('🎉 All models loaded successfully');
-    
+
     // Setup character physics after models are loaded
     setupCharacterPhysics();
-    
+
     // Start animation loop
     animate();
-    
+
     console.log('✅ Application fully initialized');
 }
 

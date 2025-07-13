@@ -100,13 +100,13 @@ function setupTablos(tabloObjects, scene, world, RAPIER, debugRenderer) {
             debugRenderer.addTabloWireframe(tabloObject);
         }
 
-        console.log(`✅ Tablo object '${tabloObject.name}' loaded with physics collider`);
+        // console.log(`✅ Tablo object '${tabloObject.name}' loaded with physics collider`);
     });
 }
 
 function createTrimeshCollider(object, world, RAPIER, type = 'static') {
     if (!object || !world || !RAPIER) {
-        console.error('Missing required parameters for trimesh collider creation');
+        // console.error('Missing required parameters for trimesh collider creation');
         return;
     }
 
@@ -144,12 +144,12 @@ function createTrimeshCollider(object, world, RAPIER, type = 'static') {
                 world.createCollider(colliderDesc);
                 colliderCount++;
 
-                console.log(`✅ Trimesh collider created for ${type} mesh: ${child.name}`);
+                // console.log(`✅ Trimesh collider created for ${type} mesh: ${child.name}`);
             } catch (error) {
                 console.error(`Failed to create trimesh collider for ${child.name}:`, error);
             }
         }
     });
 
-    console.log(`✅ Total ${colliderCount} trimesh colliders created for ${type}: ${object.name}`);
+    // console.log(`✅ Total ${colliderCount} trimesh colliders created for ${type}: ${object.name}`);
 }

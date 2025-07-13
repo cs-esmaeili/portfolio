@@ -4,7 +4,7 @@ import * as THREE from 'three';
 
 
 
-export const setupEvents = (camera, renderer, pointer, width, height, aspect, getIntersectObject, getCharacter, setCharacter, scene, getZamin) => {
+export const setupEvents = (camera, renderer, pointer, width, height, aspect, getIntersectObject, getCharacter, setCharacter) => {
     const frustumSize = 100;
 
     const onResize = () => {

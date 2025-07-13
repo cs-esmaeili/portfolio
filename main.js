@@ -68,7 +68,6 @@
 // }
 // renderer.setAnimationLoop(animate);
 
-
 import * as THREE from 'three';
 const RAPIER = await import('@dimforge/rapier3d');
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -76,21 +75,18 @@ const canvas = document.getElementById("experience-canvas");
 import { loadGLTF } from './loader';
 import { initLight } from './lights';
 import { createRapierDebugRenderer } from './rapierDebug';
+// import { setupEvents } from './events'
 
 // ---------- Rapier world setup ----------
 const gravity = { x: 0, y: -9.81, z: 0 };
 const world = new RAPIER.World(gravity);
-
-// Static ground collider
-const groundColliderDesc = RAPIER.ColliderDesc.cuboid(5, 0.1, 5);
-world.createCollider(groundColliderDesc);
 
 // ---------- Three.js scene ----------
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x202020);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 2, 10);
+camera.position.set(0, 100, 155);
 
 const controls = new OrbitControls(camera, canvas);
 
@@ -103,10 +99,9 @@ initLight(scene);
 const intersectObjectsNames = ["tablo1", "tablo2", "tablo3"];
 const intersectObjects = [];
 let intersectObject = null;
-let zamin = null;
+let zamin = { instance: null };
 let character = { instance: null, boundingBox: null, body: null, moveDistance: 7, jumpHeight: 5, isMoving: false, moveDuration: 0.2 };
 
-let charBody = null;
 let debugRenderer = null;
 
 loadGLTF(scene, intersectObjectsNames, intersectObjects, () => {
@@ -121,24 +116,49 @@ loadGLTF(scene, intersectObjectsNames, intersectObjects, () => {
     const halfY = size.y / 2;
     const halfZ = size.z / 2;
 
-    // Rigid body در مرکز اصلی
+    // Rigid body برای کاراکتر
     const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(center.x, center.y, center.z);
     const charBody = world.createRigidBody(bodyDesc);
 
-    // ✅ offsetY برای پایین بردن Collider بدون جابه‌جایی Body
-    const offsetY = size.y * 0.1; // اینو به دلخواهت تست کن
-
+    // offsetY برای پایین بردن کلایدر
+    const offsetY = size.y * 0.1;
     const colliderDesc = RAPIER.ColliderDesc.cuboid(halfX, halfY, halfZ)
-        .setTranslation(0, -offsetY, 0); // فقط کلایدر میاد پایین
+        .setTranslation(0, -offsetY, 0);
 
     world.createCollider(colliderDesc, charBody);
-
-    // ذخیره
     character.body = charBody;
 
+    // ------------------ ✅ ساخت کلایدر دقیق زمین (trimesh) ------------------
+    zamin.instance.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+            let geo = child.geometry.clone();
+            geo.applyMatrix4(child.matrixWorld); // اعمال ترنسفورم کامل
 
-    // Debug renderer
-    debugRenderer = createRapierDebugRenderer(world, scene, RAPIER);
+            geo = geo.toNonIndexed(); // تبدیل به NonIndexed برای دسترسی راحت‌تر
+
+            const posAttr = geo.attributes.position;
+            const vertices = [];
+            for (let i = 0; i < posAttr.count; i++) {
+                vertices.push(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+            }
+
+            const indices = [];
+            for (let i = 0; i < posAttr.count; i++) {
+                indices.push(i);
+            }
+
+            const colliderDesc = RAPIER.ColliderDesc.trimesh(vertices, indices)
+                .setTranslation(0, 0, 0); // چون از قبل transform اعمال شده
+
+            world.createCollider(colliderDesc);
+
+            console.log("✅ Trimesh collider created for ground mesh:", child.name);
+        }
+    });
+    // ------------------------------------------------------------------------
+
+    // ✅ Debug renderer with ground object passed
+    debugRenderer = createRapierDebugRenderer(world, scene, RAPIER, zamin.instance);
 }, character, zamin);
 
 // ---------- Animation loop ----------
@@ -162,4 +182,3 @@ function animate() {
 }
 
 animate();
-

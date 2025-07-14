@@ -11,7 +11,7 @@ const sounds = {
   backgroundMusic: new Howl({
     src: ["./music/music.mp3"],
     loop: true,
-    volume: 0.3,
+    volume: 1.5,
     preload: true,
   }),
 
@@ -21,10 +21,15 @@ const sounds = {
     preload: true,
   }),
 
+  pokemonSFX: new Howl({
+    src: ["./music/pokemon.ogg"],
+    volume: 0.5,
+    preload: true,
+  }),
 
   jumpSFX: new Howl({
     src: ["./music/jumpsfx.ogg"],
-    volume: 1.0,
+    volume: 0.5,
     preload: true,
   }),
 };
@@ -65,7 +70,7 @@ let character = {
   instance: null,
   isMoving: false,
   spawnPosition: new THREE.Vector3(),
-  originalScale: { x: 1, y: 1, z: 1 } // Add this line
+  originalScale: { x: 1, y: 1, z: 1 }
 };
 
 let targetRotation = Math.PI / 2;
@@ -124,7 +129,7 @@ const modalContent = {
   Cube002: {
     title: "Discord Clone",
     content:
-      "I’m building an app similar to Discord, designed to connect people through seamless voice, video, and text communication.It will create a fun, interactive space where communities can easily gather and share.",
+      "I'm building an app similar to Discord, designed to connect people through seamless voice, video, and text communication.It will create a fun, interactive space where communities can easily gather and share.",
     link: "https://example.com/",
   },
   Cube019: {
@@ -197,16 +202,21 @@ manager.onLoad = function () {
   });
 };
 
+
 enterButton.addEventListener("click", () => {
-  gsap.to(loadingScreen, {
-    opacity: 0,
-    duration: 0,
-  });
+  if (loadingScreen) {
+    gsap.to(loadingScreen, {
+      opacity: 0,
+      duration: 0,
+    });
+  }
   gsap.to(instructions, {
     opacity: 0,
     duration: 0,
     onComplete: () => {
-      loadingScreen.remove();
+      if (loadingScreen) {
+        loadingScreen.remove();
+      }
     },
   });
 
@@ -216,7 +226,32 @@ enterButton.addEventListener("click", () => {
   }
 });
 
-//Audio
+// Camera Stuff
+const aspect = sizes.width / sizes.height;
+const camera = new THREE.OrthographicCamera(
+  -aspect * 50,
+  aspect * 50,
+  50,
+  -50,
+  1,
+  1000
+);
+
+// Set your desired camera position
+const x = -130.328;
+const y = 70.505;
+const z = 174.446;
+camera.position.set(x, y, z);
+
+// Camera offset variables (will be calculated after character loads)
+let cameraOffset = new THREE.Vector3();
+let isCameraOffsetSet = false;
+
+camera.zoom = 1.4;
+camera.updateProjectionMatrix();
+
+// const controls = new OrbitControls(camera, canvas);
+// controls.update();
 
 // GLTF Loader
 // See: https://threejs.org/docs/?q=glt#examples/en/loaders/GLTFLoader
@@ -235,7 +270,6 @@ loader.load(
       }
 
       if (child.name === "character") {
-
         character.spawnPosition.copy(child.position);
         character.instance = child;
 
@@ -243,12 +277,21 @@ loader.load(
 
         child.position.y = 15;
         character.spawnPosition.y = 15;
+        
         // FIX 1: Set the character scale to match Blender
         // Adjust this value (2.0) to match your desired size
         character.instance.scale.set(2.0, 2.0, 2.0);
 
         // Store the original scale for reference
         character.originalScale = { x: 2.0, y: 2.0, z: 2.0 };
+
+        // Calculate camera offset based on initial positions
+        cameraOffset.set(
+          x - child.position.x,  // X offset from character
+          0,                     // Y offset (we'll handle Y separately)
+          z - child.position.z   // Z offset from character
+        );
+        isCameraOffsetSet = true;
 
         playerCollider.start
           .copy(child.position)
@@ -269,13 +312,13 @@ loader.load(
     console.error(error);
   }
 );
-// Lighting and Enviornment Stuff
+
+// Lighting and Environment Stuff
 // See: https://threejs.org/docs/?q=light#api/en/lights/DirectionalLight
 // See: https://threejs.org/docs/?q=light#api/en/lights/AmbientLight
 
 const ambientLight = new THREE.AmbientLight(0x404040, 10);
 scene.add(ambientLight);
-
 
 const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.7);
 directionalLight.castShadow = true;
@@ -291,41 +334,6 @@ scene.add(directionalLight);
 
 directionalLight.shadow.normalBias = 0.2;
 scene.add(directionalLight.target);
-scene.add(directionalLight);
-
-// const shadowCameraHelper = new THREE.CameraHelper(sun.shadow.camera);
-// scene.add(shadowCameraHelper);
-
-// const sunHelper = new THREE.CameraHelper(sun);
-// scene.add(sunHelper);
-
-
-// Camera Stuff
-// See: https://threejs.org/docs/?q=orth#api/en/cameras/OrthographicCamera
-const aspect = sizes.width / sizes.height;
-const camera = new THREE.OrthographicCamera(
-  -aspect * 50,
-  aspect * 50,
-  50,
-  -50,
-  1,
-  1000
-);
-
-camera.position.x = -13;
-camera.position.y = 39;
-camera.position.z = -67;
-
-// const camera = new THREE.OrthographicCamera(-aspect * 50, aspect * 50, 50, -50, 1, 1000);
-// camera.position.set(-130.328, 109.505, 174.446);
-
-const cameraOffset = new THREE.Vector3(-13, 50, 35);
-
-camera.zoom = 1.4;
-camera.updateProjectionMatrix();
-
-const controls = new OrbitControls(camera, canvas);
-controls.update();
 
 // Handle when window resizes
 function onResize() {
@@ -440,9 +448,32 @@ function handleInteraction() {
   }
 
   if (intersectObject !== "") {
-    showModal(intersectObject);
-    if (!isMuted) {
-      playSound("projectsSFX");
+    // Check if it's a Pokemon/interactive object that should jump
+    if (
+      [
+        "Bulbasaur",
+        "Chicken", 
+        "Pikachu",
+        "Charmander",
+        "Squirtle",
+        "Snorlax",
+      ].includes(intersectObject)
+    ) {
+      if (isCharacterReady) {
+        if (!isMuted) {
+          playSound("pokemonSFX");
+        }
+        jumpCharacter(intersectObject);
+        isCharacterReady = false;
+      }
+    } else {
+      // For other objects, show modal
+      if (intersectObject) {
+        showModal(intersectObject);
+        if (!isMuted) {
+          playSound("projectsSFX");
+        }
+      }
     }
   }
 }
@@ -454,13 +485,15 @@ function onMouseMove(event) {
 }
 
 function onTouchEnd(event) {
-  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  // اگر touchend است، باید از touches یا changedTouches بگیریم
+  if (event.changedTouches && event.changedTouches.length > 0) {
+    pointer.x = (event.changedTouches[0].clientX / window.innerWidth) * 2 - 1;
+    pointer.y = -(event.changedTouches[0].clientY / window.innerHeight) * 2 + 1;
+  }
 
   touchHappened = true;
   handleInteraction();
 }
-
 // Movement and Gameplay functions
 function respawnCharacter() {
   character.instance.position.copy(character.spawnPosition);
@@ -518,8 +551,7 @@ function updatePlayer() {
   character.instance.position.copy(playerCollider.start);
   character.instance.position.y -= CAPSULE_RADIUS;
 
-
-  character.instance.rotation.y = targetRotation
+  character.instance.rotation.y = targetRotation;
 }
 
 function onKeyDown(event) {
@@ -690,6 +722,7 @@ function handleJumpAnimation() {
     duration: jumpDuration * 0.2,
   });
 }
+
 function handleContinuousMovement() {
   if (!character.instance) return;
 
@@ -703,7 +736,6 @@ function handleContinuousMovement() {
     if (pressedButtons.up) {
       playerVelocity.z -= MOVE_SPEED;
       targetRotation = -Math.PI / 2;
-
     }
     if (pressedButtons.down) {
       playerVelocity.z = MOVE_SPEED;
@@ -724,33 +756,41 @@ function handleContinuousMovement() {
 }
 
 Object.entries(mobileControls).forEach(([direction, element]) => {
-  element.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    pressedButtons[direction] = true;
-  });
+  if (element) {
+    element.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      e.stopPropagation(); // Prevent event from bubbling up
+      pressedButtons[direction] = true;
+    });
 
-  element.addEventListener("touchend", (e) => {
-    e.preventDefault();
-    pressedButtons[direction] = false;
-  });
+    element.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      e.stopPropagation(); // Prevent event from bubbling up
+      pressedButtons[direction] = false;
+    });
 
-  element.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    pressedButtons[direction] = true;
-  });
+    element.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation(); // Prevent event from bubbling up
+      pressedButtons[direction] = true;
+    });
 
-  element.addEventListener("mouseup", (e) => {
-    e.preventDefault();
-    pressedButtons[direction] = false;
-  });
+    element.addEventListener("mouseup", (e) => {
+      e.preventDefault();
+      e.stopPropagation(); // Prevent event from bubbling up
+      pressedButtons[direction] = false;
+    });
 
-  element.addEventListener("mouseleave", (e) => {
-    pressedButtons[direction] = false;
-  });
+    element.addEventListener("mouseleave", (e) => {
+      e.stopPropagation(); // Prevent event from bubbling up
+      pressedButtons[direction] = false;
+    });
 
-  element.addEventListener("touchcancel", (e) => {
-    pressedButtons[direction] = false;
-  });
+    element.addEventListener("touchcancel", (e) => {
+      e.stopPropagation(); // Prevent event from bubbling up
+      pressedButtons[direction] = false;
+    });
+  }
 });
 
 window.addEventListener("blur", () => {
@@ -759,7 +799,7 @@ window.addEventListener("blur", () => {
   });
 });
 
-// Adding Event Listeners (tbh could make some of these just themselves rather than seperating them, oh well)
+// Adding Event Listeners
 modalExitButton.addEventListener("click", hideModal);
 modalbgOverlay.addEventListener("click", hideModal);
 themeToggleButton.addEventListener("click", toggleTheme);
@@ -776,17 +816,19 @@ function animate() {
   updatePlayer();
   handleContinuousMovement();
 
-  if (character.instance) {
-    const targetCameraPosition = new THREE.Vector3(
-      character.instance.position.x + cameraOffset.x - 20,
-      cameraOffset.y,
-      character.instance.position.z + cameraOffset.z + 30
+  if (character.instance && isCameraOffsetSet) {
+    // Follow character maintaining the same distance/offset
+    camera.position.set(
+      character.instance.position.x + cameraOffset.x,
+      y, // Keep Y axis fixed
+      character.instance.position.z + cameraOffset.z
     );
-    camera.position.copy(targetCameraPosition);
+
+    // Make camera look at character but at a fixed Y level to prevent up/down tilting
     camera.lookAt(
-      character.instance.position.x + 10,
-      camera.position.y - 39,
-      character.instance.position.z + 10
+      character.instance.position.x,
+      15, // Fixed Y position (character's spawn Y level)
+      character.instance.position.z
     );
   }
 
